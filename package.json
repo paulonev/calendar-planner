@@ -1,0 +1,53 @@
+{
+  "name": "calendar-planner",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./src/app.js",
+  "scripts": {
+    "start": "webpack serve -c webpack.dev.сjs",
+    "lint": "eslint ./src/*.js",
+    "build:scss": "node-sass -w ./src/css/main.scss -o ./dist/css //unused command",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1",
+    "mongodb": "^3.6.9",
+    "typeorm": "^0.2.34"
+  },
+  "devDependencies": {
+    "css-loader": "^5.2.6",
+    "dotenv": "^10.0.0",
+    "eslint": "^7.29.0",
+    "html-loader": "^2.1.2",
+    "html-webpack-plugin": "^5.3.2",
+    "node-sass": "^6.0.1",
+    "sass": "^1.35.2",
+    "sass-loader": "^12.1.0",
+    "style-loader": "^3.0.0",
+    "webpack": "^5.43.0",
+    "webpack-cli": "^4.7.2",
+    "webpack-dev-server": "^3.11.2"
+  },
+  "eslintConfig": {
+    "env": {
+      "browser": true,
+      "es6": true
+    },
+    "parserOptions": {
+      "ecmaVersion": 2021,
+      "sourceType": "module"
+    },
+    "extends": [
+      "eslint:recommended"
+    ],
+    "plugins": [],
+    "rules": {
+      "no-undef": "warn",
+      "no-unused-vars": "warn"
+    }
+  }
+}

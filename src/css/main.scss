@@ -1,0 +1,16 @@
+@import "./font.scss";
+
+body {
+    font-family: $family;
+    font-size: $size;
+}
+
+tr {
+    .weekend {
+        color: #ff0041;
+    }
+    .unselectedMonth {
+        color: #cecece; 
+    }
+}
+
