@@ -14,3 +14,11 @@ tr {
     }
 }
 
+.widgets {
+    display: flex;
+}
+
+.widgets__planner {
+    position: relative;
+    left: 100px;
+}

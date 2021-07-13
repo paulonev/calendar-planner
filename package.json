@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./src/app.js",
   "scripts": {
-    "start": "webpack serve -c webpack.dev.сjs",
+    "start": "webpack serve -c webpack.dev.cjs",
     "lint": "eslint ./src/*.js",
     "build:scss": "node-sass -w ./src/css/main.scss -o ./dist/css //unused command",
     "test": "echo \"Error: no test specified\" && exit 1"
