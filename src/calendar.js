@@ -6,6 +6,11 @@
 // 5. when selecting period - open right panel with plan-input and other info - in progress
 //    5.1. problems - selection disappears when switch options, global objects bad practice
 // 6. select/unselect whole week with the click on week number
+
+import Planner from "./planner.js";
+import { EventEmitter } from "events";
+import selectedDays from "./utils/selectedDates.js";
+
 const DAYS_IN_WEEK = 7;
 const DEFAULT_MONTH = new Date().getMonth();
 const DEFAULT_YEAR = new Date().getFullYear();
@@ -29,9 +34,6 @@ const fillParameters = {
     month: DEFAULT_MONTH,
     year: DEFAULT_YEAR
 };
-
-// bad practice: global object
-const selectedDates = { dates: [] };
 
 window.addEventListener("DOMContentLoaded", loadCalendarDataEventHandler);
 
@@ -114,6 +116,7 @@ function loadCalendarDataEventHandler(event) {
     });
 }
 
+// let planner;
 function dateSelectionEventHandler(event) {
     event.preventDefault();
     const selectionColor = "#0041ff";
@@ -121,14 +124,15 @@ function dateSelectionEventHandler(event) {
     
     if(targetStyle.background === "") {
         targetStyle.background = selectionColor;
-        selectedDates.dates.push(this); // this is parsedDate's ref
+        selectedDays.add(this); // this is parsedDate's ref
     } else {
         targetStyle.background = "";
-        let removeIdx = selectedDates.dates.findIndex(d => d === this);
-        selectedDates.dates.splice(removeIdx, 1);
+        selectedDays.remove(this);
     }
 
-    console.log(selectedDates.dates.sort((a,b) => a - b));
+    // console.log(selectedDays.days.sort((a,b) => a - b));
+    const planner = new Planner(selectedDays.days);
+    planner.update();
 }
 
 // helpers
@@ -153,7 +157,7 @@ const fill = ({year, month}) => {
       .fill()
       .map((_, i) => {
         return {
-          fullDate: new Date(year, month, i+1),
+          fullDate: new Date(year, month-1, i+1),
           selectedMonth: false
         }
     });
@@ -166,7 +170,7 @@ const fill = ({year, month}) => {
       .fill()
       .map((_, i) => {
         return {
-          fullDate: new Date(year, month, i+1),
+          fullDate: new Date(year, month+1, i+1),
           selectedMonth: false
         }
     });
@@ -192,6 +196,11 @@ const fill = ({year, month}) => {
             if(day.selectedMonth == false) {
                 cell.setAttribute("class", "unselectedMonth");
             }
+            
+            if(selectedDays.contains(day.fullDate)) {
+                cell.style.background = "#0041ff";
+            }
+
             cell.appendChild(cellText);
             row.appendChild(cell);
         }
