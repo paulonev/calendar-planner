@@ -1,29 +1,33 @@
+import {PlanListItem} from "./utils/planListItem.js";
+import PlansController from "./api/plans.controller.js";
+
+// client-side script
 export default class Planner {
     constructor(dates) {
         this.dates = dates;
         this.plans = [];
     }
-
+    
     // TODO: make user-friendly dates output, grouping by month
-    update() {
+    async update() {
         let planner = document.querySelector(".widgets__planner");
         if(!planner) {
             return;
         }
-
+        
         if(planner.children.length === 0 && this.dates.length > 0) {
             let selectedDaysDiv = document.createElement("div");
             selectedDaysDiv.setAttribute("class", "planner__selected-days");
             selectedDaysDiv.innerText = `${this.dates.length}`;
             planner.appendChild(selectedDaysDiv);
-
+            
             let planInput = document.createElement("div");
             let header3 = document.createElement("h3");
             header3.appendChild(document.createTextNode("Choose time and write some plans"));
             planInput.appendChild(header3);
             planInput.setAttribute("class", "input-plan");
             planner.appendChild(planInput);
-
+            
             let formTimeInput = document.createElement("input");
             formTimeInput.type = "time";
             formTimeInput.id = "time";
@@ -39,21 +43,35 @@ export default class Planner {
             let form = document.createElement("form");
             [formTimeInput, formPlanInput, formButton].forEach((elem) => form.appendChild(elem));
             form.setAttribute("class", "input-plan__form");
-
+            
+            form.addEventListener("submit", (ev) => {
+                ev.preventDefault();
+                const data = new FormData(ev.target);
+/*callback */     this.addPlan(data, (data) => {
+                    /* Func that append a plan to planlist */
+                    const parsedFormDataObject = Object.create({});
+                    for(let [key, value] of data) {
+                        parsedFormDataObject[key] = value;
+                    }
+                    const planListItem = new PlanListItem(parsedFormDataObject);
+                    planList.appendChild(planListItem.getHtmlNode());
+                })
+            })
+            
             planner.appendChild(form);
             let header4 = document.createElement("h4");
             header4.appendChild(document.createTextNode("Planlist"));
             planner.appendChild(header4);
-
+            
             let planList = document.createElement("div");
             planList.setAttribute("class", "widget__planner-planlist");
             planner.appendChild(planList);
-
+            
             let planEmailForm = document.createElement("div");
             header3 = document.createElement("h3");
             header3.appendChild(document.createTextNode("Email anybody with this plans"));
             planEmailForm.appendChild(header3)
-
+            
             let formEmailInput = document.createElement("input");
             formEmailInput.type = "email";
             formEmailInput.id = "email";
@@ -65,11 +83,11 @@ export default class Planner {
             emailForm.appendChild(formEmailInput);
             emailForm.appendChild(emailFormButton);
             emailForm.setAttribute("class", "email-form");
-        
+            
             planEmailForm.appendChild(emailForm);
-
+            
             planner.appendChild(planEmailForm);
-
+            
             let closeButton = document.createElement("button");
             closeButton.innerText = "Close";
             closeButton.addEventListener("click", () => planner.innerHTML = null);
@@ -79,19 +97,51 @@ export default class Planner {
             let elem = document.querySelector(".planner__selected-days");
             elem.innerText = this.dates.length;
         }
+        
+        //interaction with server-side script 
+        //make plans.controller request to get user plans to display
+        //we have this.dates and process.env.DEFAULT_USER
+        const planListNode = document.querySelector(".widget__planner-planlist");
+        const req = { days: this.dates, user: {name : process.env.DEFAULT_USER} };
+        const resp = await PlansController.apiGetPlans(req);
+        if('data' in resp) {
+            resp.data.forEach((d) => {
+                const planItemDTO = new PlanListItem(d);
+                planListNode.appendChild(planItemDTO.getHtmlNode());
+            });
+        }
+        else if('error' in resp) {
+            planListNode.appendChild(document.createTextNode("Sorry. We have an error. Retry later, please."));
+        }
     }
-
-    // TODO: set this is event listener
-    addPlan(plan, callbackFn) {
+    
+    /**
+    * TODO: set this is event listener
+    * @param {Object} plan - form data
+    * @param {Object} callback - update planList node
+    */
+    async addPlan(plan, callback) {
         if(!plan) {
             //create error
             //dispatch error on planner
+            console.error("Error. Undefined plan.");
             return;
-        }
-        //TODO: use dao commands to update db
-
+        }      
+        
         this.plans.push(plan);
-        callbackFn();
-        return;
+        
+        //TODO: use controller commands to update db
+        for(let date in this.dates) {
+            const req = { plan, date };
+            const resp = await PlansController.apiCreatePlan(req); // is it analogous to fetch using??
+            if('error' in resp) {
+                console.error(`Db error. Couldn't add a plan.`)
+                return;
+            }
+        }
+        
+        // decide upon callback usage
+        // update UI
+        callback(plan);
     }
 }

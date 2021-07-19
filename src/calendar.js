@@ -8,7 +8,6 @@
 // 6. select/unselect whole week with the click on week number
 
 import Planner from "./planner.js";
-import { EventEmitter } from "events";
 import selectedDays from "./utils/selectedDates.js";
 
 const DAYS_IN_WEEK = 7;
@@ -116,7 +115,6 @@ function loadCalendarDataEventHandler(event) {
     });
 }
 
-// let planner;
 function dateSelectionEventHandler(event) {
     event.preventDefault();
     const selectionColor = "#0041ff";
@@ -130,7 +128,6 @@ function dateSelectionEventHandler(event) {
         selectedDays.remove(this);
     }
 
-    // console.log(selectedDays.days.sort((a,b) => a - b));
     const planner = new Planner(selectedDays.days);
     planner.update();
 }
