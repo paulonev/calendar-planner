@@ -25,9 +25,9 @@ export default class PlanList {
 }
 
 export class PlanListItem {
-    constructor({ time, plan }) {
-        this.time = time;
-        this.plan = plan;
+    constructor({ date, user_name }) {
+        this.time = date;
+        this.plan = user_name;
         this.checkBoxOn = false;
     }
 

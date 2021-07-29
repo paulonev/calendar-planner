@@ -1,11 +1,14 @@
+import "../dayjs";
+
 class SelectedDays {
     constructor() {
         this.days = [];
+        this.formatString = "YYYY-MM-DD";
     }
 
     contains(day) {
-        const dayString = day.toDateString();
-        let findResult = this.days.find(d => d.toDateString() === dayString);
+        const dayString = this.format(day);
+        let findResult = this.days.find(d => d === dayString);
         return findResult !== undefined ? true : false; 
     }
 
@@ -13,13 +16,17 @@ class SelectedDays {
         if(Object.getPrototypeOf(day) !== Date.prototype){
             console.error(`Add selected day error, added object ${day} has wrong type.`);
         }
-        this.days.push(day);
+        this.days.push(this.format(day));
     }
 
     remove(day) {
-        const dayString = day.toDateString();
-        let removeIdx = this.days.findIndex(d => d.toDateString() === dayString);
+        const dayString = this.format(day);
+        let removeIdx = this.days.findIndex(d => d === dayString);
         this.days.splice(removeIdx, 1);
+    }
+
+    format(day) {
+        return dayjs(day).format(this.formatString);
     }
 }
 

@@ -1,5 +1,4 @@
 import {PlanListItem} from "./utils/planListItem.js";
-import PlansController from "./api/plans.controller.js";
 
 // client-side script
 export default class Planner {
@@ -98,19 +97,26 @@ export default class Planner {
             elem.innerText = this.dates.length;
         }
         
+        //using fetch API instead on PlansController
         //interaction with server-side script 
         //make plans.controller request to get user plans to display
         //we have this.dates and process.env.DEFAULT_USER
         const planListNode = document.querySelector(".widget__planner-planlist");
-        const req = { days: this.dates, user: {name : process.env.DEFAULT_USER} };
-        const resp = await PlansController.apiGetPlans(req);
-        if('data' in resp) {
-            resp.data.forEach((d) => {
+        try {
+            //work around nested obj parsing issue
+            const req = { days: this.dates, userName : "paulOkunev@mgail.com" };
+            const url = new URL("http://localhost:8080/plans");
+            url.search = new URLSearchParams(req).toString();
+            
+            const res = await fetch(url);
+            const {data} = await res.json();
+
+            data.forEach((d) => {
                 const planItemDTO = new PlanListItem(d);
                 planListNode.appendChild(planItemDTO.getHtmlNode());
             });
-        }
-        else if('error' in resp) {
+        } catch (error) {
+            console.log(error);
             planListNode.appendChild(document.createTextNode("Sorry. We have an error. Retry later, please."));
         }
     }
@@ -121,6 +127,8 @@ export default class Planner {
     * @param {Object} callback - update planList node
     */
     async addPlan(plan, callback) {
+        var url = new URL("http://localhost:8080/plans");
+        
         if(!plan) {
             //create error
             //dispatch error on planner
@@ -132,11 +140,21 @@ export default class Planner {
         
         //TODO: use controller commands to update db
         for(let date in this.dates) {
-            const req = { plan, date };
-            const resp = await PlansController.apiCreatePlan(req); // is it analogous to fetch using??
-            if('error' in resp) {
+            try
+            {
+                const req = { plan, date };
+                await fetch(url, 
+                    {
+                        method: "POST",
+                        headers: {
+                            'Content-Type': 'application/json;charset=utf-8'
+                        },
+                        body: JSON.stringify(req)
+                    }
+                );
+            } catch (error)
+            {
                 console.error(`Db error. Couldn't add a plan.`)
-                return;
             }
         }
         

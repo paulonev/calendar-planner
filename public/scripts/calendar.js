@@ -65,6 +65,7 @@ function createYearDropdown() {
     document.querySelector(".widget__header").appendChild(dropdown);
 }
 
+// main method to perform by a server over markup
 export const initCalendar = () => {
     let table = document.createElement("table");
     table.setAttribute("class", "tbl");

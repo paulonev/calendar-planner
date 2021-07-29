@@ -1,0 +1,22 @@
+body {
+  font-family: "Fira Sans", "Noto Sans", sans-serif;
+  font-size: 20px;
+}
+
+tr .weekend {
+  color: #ff0041;
+}
+tr .unselectedMonth {
+  color: #cecece;
+}
+
+.widgets {
+  display: flex;
+}
+
+.widgets__planner {
+  position: relative;
+  left: 100px;
+}
+
+/*# sourceMappingURL=main.css.map */
