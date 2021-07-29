@@ -1,23 +1,43 @@
-const path = require("path");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
+/* eslint-disable no-undef */
+// const path = require("path");
+import { fileURLToPath } from "url";
+import path, { dirname } from "path";
+import HtmlWebpackPlugin from "html-webpack-plugin";
+import {WebpackManifestPlugin} from "webpack-manifest-plugin";
+// const HtmlWebpackPlugin = require("html-webpack-plugin");
+// const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 
-module.exports = {
-    entry: "./src/app.js",
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const config = {
     mode: "development",
+    entry: "./src/app.js",
     output: {
         filename: "[name].bundle.js",
-        clean: true
+        path: path.resolve(__dirname, "dist"),
+        // clean: true,
+        publicPath: "/"
+    },
+    devServer: {
+        contentBase: "./dist"
     },
     resolve: {
         fallback: {
             "crypto" : false,
             "os" : false,
             "zlib" : false,
-            "http" : false
+            "http" : false,
+            "fs" : false,
+            "net" : false,
+            "dns" : false,
+            "tls" : false,
+            "mongodb-client-encryption" : false
         }
     },
     plugins: [
-        new HtmlWebpackPlugin({template: "./public/template.html"})
+        new HtmlWebpackPlugin({template: "./public/template.html"}),
+        new WebpackManifestPlugin()
     ],
     module: {
         rules: [
@@ -34,6 +54,8 @@ module.exports = {
                 ]
             },
         ]
-    },
-    devtool: "source-map"
-}
+    }
+    //add optimization.splitChunks
+};
+
+export default config;

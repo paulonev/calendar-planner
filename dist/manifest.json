@@ -1,0 +1,4 @@
+{
+  "main.js": "automain.bundle.js",
+  "index.html": "autoindex.html"
+}

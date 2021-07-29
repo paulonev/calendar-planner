@@ -1,15 +1,15 @@
-import process from "process";
+/* eslint-disable no-undef */
+// represents src module referenced from global index
+// replicates app.js
 import app from "./server.js";
 import PlansDAO from "./dao/plansDAO.js";
-// import "./css/main.css";
-// import { initCalendar } from './calendar.js';
 import { MongoClient } from "mongodb";
 
 const portNum = process.env.PORT || 8081;
-
-MongoClient.connect(process.env.APP_DB_URI, {
-    useNewUrlParser: true, poolSize: 10, wtimeout: 2500
-})
+MongoClient.connect(
+    process.env.APP_DB_URI, 
+    { useNewUrlParser: true, maxPoolSize: 10, wtimeoutMS: 2500 }
+)
 .catch(err => {
     console.error(err.stack);
     process.exit(1);

@@ -1,19 +1,20 @@
 import PlansDAO from "../dao/plansDAO.js";
+import process from "process";
 
 export default class PlansController {
     // 1. user wants to view his plans for each of selected days
     // would I use express routing mechanisms here? suppose, no.
     // so req object contains just my data, i.e. dates[] 
-    static async apiGetPlans(req) {
-        let days = req.days ?? []; //assume it to be a collection
-        let user = req.user;
+    static async apiGetPlans(req, res, next) {
+        let days = req.query.days.split(',') ?? []; //assume it to be a collection
+        let user = req.query.userName; //should be an object
         let response = await PlansDAO.getPlans(days, user);
     
-        if('error' in response) {
-            return { status: 500, error: response };
-        }
-
-        return { status: 200, data: response };
+        console.log(response);
+        // if('error' in response) {
+        //     res.status(500).send({error: response});
+        // }
+        res.json({data: response});
     }
 
     // 2. user wants to create new plan that will be stored in db

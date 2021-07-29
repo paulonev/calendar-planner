@@ -41,18 +41,14 @@ export default class PlansDAO {
      */
     static async getPlans(days, user) {
         // Design collection "user_plans"s schema
-        try {
-            const plansResultCursor = plans.find(
-                { 
-                  date: { $in: days }, 
-                  user_name: user.name 
-                }
-            );
-            return plansResultCursor.toArray();
-        } catch(e) {
-            console.error(`DAO-error: unable to find plans, ${e}`);
-            return e;
-        }
+        
+        const plansResultCursor = plans.find(
+            { 
+                date: { $in: days }, 
+                user_name: user
+            }
+        );
+        return plansResultCursor.toArray();
     }
 
     /**
