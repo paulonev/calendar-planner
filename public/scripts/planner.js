@@ -4,7 +4,6 @@ import {PlanListItem} from "./utils/planListItem.js";
 export default class Planner {
     constructor(dates) {
         this.dates = dates;
-        this.plans = [];
     }
     
     // TODO: make user-friendly dates output, grouping by month
@@ -45,16 +44,14 @@ export default class Planner {
             
             form.addEventListener("submit", (ev) => {
                 ev.preventDefault();
-                const data = new FormData(ev.target);
-/*callback */     this.addPlan(data, (data) => {
-                    /* Func that append a plan to planlist */
-                    const parsedFormDataObject = Object.create({});
-                    for(let [key, value] of data) {
-                        parsedFormDataObject[key] = value;
-                    }
-                    const planListItem = new PlanListItem(parsedFormDataObject);
-                    planList.appendChild(planListItem.getHtmlNode());
-                })
+                const formData = new FormData(ev.target);
+                try {
+                    /* updateView is a func that append a plan to planlist */ 
+                    this.addPlan(formData, this.updateView);
+                    form.reset();
+                } catch(error) {
+                    console.error(error);
+                }
             })
             
             planner.appendChild(form);
@@ -103,63 +100,86 @@ export default class Planner {
         //we have this.dates and process.env.DEFAULT_USER
         const planListNode = document.querySelector(".widget__planner-planlist");
         try {
-            //work around nested obj parsing issue
+            //work around nested obj parsing issue, or choose another tool (axios, for instance)
             const req = { days: this.dates, userName : "paulOkunev@mgail.com" };
             const url = new URL("http://localhost:8080/plans");
             url.search = new URLSearchParams(req).toString();
             
             const res = await fetch(url);
             const {data} = await res.json();
-
-            data.forEach((d) => {
-                const planItemDTO = new PlanListItem(d);
-                planListNode.appendChild(planItemDTO.getHtmlNode());
-            });
+            
+            this.updateView(planListNode, data);
         } catch (error) {
             console.log(error);
             planListNode.appendChild(document.createTextNode("Sorry. We have an error. Retry later, please."));
         }
     }
     
+    // === Callback that appends data to planListNode in form of html ===
+    updateView(planListNode, data) {
+        planListNode.innerHTML = "";
+        data.forEach((d) => {
+            planListNode.appendChild(document.createElement("h4")).appendChild(document.createTextNode(d._id));
+            d.items.forEach((item) => {
+                const planListItem = new PlanListItem(item);
+                planListNode.appendChild(planListItem.getHtmlNode());
+            });
+        });
+    }
+
     /**
     * TODO: set this is event listener
-    * @param {Object} plan - form data
+    * @param {Object} formData - form data (time, plan)
     * @param {Object} callback - update planList node
     */
-    async addPlan(plan, callback) {
-        var url = new URL("http://localhost:8080/plans");
-        
-        if(!plan) {
+    async addPlan(formData, callback) {
+        if(!formData) {
             //create error
             //dispatch error on planner
             console.error("Error. Undefined plan.");
             return;
         }      
-        
-        this.plans.push(plan);
-        
-        //TODO: use controller commands to update db
-        for(let date in this.dates) {
-            try
-            {
-                const req = { plan, date };
-                await fetch(url, 
-                    {
-                        method: "POST",
-                        headers: {
-                            'Content-Type': 'application/json;charset=utf-8'
-                        },
-                        body: JSON.stringify(req)
-                    }
-                );
-            } catch (error)
-            {
-                console.error(`Db error. Couldn't add a plan.`)
+        try
+        {
+            for(let date of this.dates) {
+                const req = { ...this.formDataToObject(formData), date };
+                console.log("Request on the client side ", req);
+
+                const url = new URL("http://localhost:8080/plans");
+                url.search = new URLSearchParams(req).toString();
+                const fetchParams = {
+                    method: "post"
+                }; 
+
+                const insertedPlan = await fetch(url, fetchParams);
+
+                // for UI update
+                const planListNode = document.querySelector(".widget__planner-planlist");
+                
+                // === Receives back plans for specified date(s) and calls updateView() === 
+                insertedPlan
+                  .json()
+                  .then((res) => {
+                    console.log("FROM API result", res.data);
+                    callback(planListNode, res.data);
+                });
             }
+        } catch (error)
+        {
+            console.error(`Db error. Couldn't add a plan. ${error}`);
+            throw error;
         }
+    }
+
+    formDataToObject(formData) {
+        if(Object.getPrototypeOf(formData) === FormData.prototype)
+        {
+            const parsedFormDataObject = Object.create({});
+            for(let [key, value] of formData) {
+                parsedFormDataObject[key] = value;
+            }
         
-        // decide upon callback usage
-        // update UI
-        callback(plan);
+            return parsedFormDataObject;
+        }
     }
 }

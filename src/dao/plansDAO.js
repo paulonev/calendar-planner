@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import { fileLogger } from "../../loggerSetup.js";
 
 let pl_cal_db; // database handle
 let plans;  // collection
@@ -15,6 +15,7 @@ export default class PlansDAO {
             this.plans = plans; // only for testing
         } catch(e) {
             console.error(`Unable to establish a collection handle in PlansDAO: ${e}`);
+            fileLogger.error(`Unable to establish a collection handle in PlansDAO: ${e}`);
         }
     }
     
@@ -41,14 +42,32 @@ export default class PlansDAO {
      */
     static async getPlans(days, user) {
         // Design collection "user_plans"s schema
-        
-        const plansResultCursor = plans.find(
-            { 
-                date: { $in: days }, 
-                user_name: user
+        const groupExpr = 
+        {
+            '$group': {
+                '_id': '$date', 
+                'items': {
+                    '$push': {
+                        'time': '$time', 
+                        'plan': '$plan'
+                    }
+                }
             }
-        );
-        return plansResultCursor.toArray();
+        };
+
+        const matchExpr = 
+        {
+            '$match': {
+                'date': {'$in': days},
+                'user_name': user
+            }
+        };
+        try {
+            return await plans.aggregate([matchExpr, groupExpr]).toArray();
+        } catch (error) {
+            console.error(`getPlans(DAO) error. ${error}`);
+            fileLogger.error(`getPlans(DAO) error. ${error}`);
+        }
     }
 
     /**
@@ -64,22 +83,33 @@ export default class PlansDAO {
      *
      * @returns Boolean value indicating whether this write result was acknowledged
     */
-    static async addPlan(plan, date, user, priority, status) {
+    static async addPlan(
+        userPlan, 
+        planDate, 
+        planTime, 
+        userName, 
+        planPriority, 
+        planStatus
+    ) {
         try {
-            const planDoc = {
-                _id : new ObjectId(),
-                text : plan.plan,
-                date : date,
-                time : plan.time,
-                user_name : user.name,
-                priority : priority ?? DEFAULT_PRIORITY,
-                status : status ?? DEFAULT_STATUS
-            }
-
-            let insertResult = await plans.insertOne(planDoc);
-            return insertResult.acknowledged;
+            const filter = { plan: userPlan, date: planDate, time: planTime };
+            const updateDoc = {
+                $set: {
+                    plan: userPlan,
+                    date: planDate,
+                    time: planTime,
+                    user_name: userName,
+                    priority: planPriority ?? DEFAULT_PRIORITY,
+                    status: planStatus ?? DEFAULT_STATUS
+                }
+            };
+            const options = { upsert: true };
+            await plans.updateOne(filter, updateDoc, options);
+            
+            return await this.getPlans([planDate], userName);
         } catch (e) {
-            console.error(`DAO-error: unable to add plan, ${e}`);
+            // console.error(`DAO-error: unable to add plan, ${e}`);
+            fileLogger.error(`DAO-error: unable to add plan, ${e}`);
             return e;
         }
     }

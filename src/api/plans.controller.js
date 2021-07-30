@@ -1,34 +1,34 @@
 import PlansDAO from "../dao/plansDAO.js";
-import process from "process";
+import {fileLogger} from "../../loggerSetup.js";
 
 export default class PlansController {
     // 1. user wants to view his plans for each of selected days
-    // would I use express routing mechanisms here? suppose, no.
-    // so req object contains just my data, i.e. dates[] 
     static async apiGetPlans(req, res, next) {
         let days = req.query.days.split(',') ?? []; //assume it to be a collection
         let user = req.query.userName; //should be an object
+
+        fileLogger.info(`getPlans(DAO) requested with: ${JSON.stringify({days: days, user: user})}`);
+
         let response = await PlansDAO.getPlans(days, user);
-    
-        console.log(response);
-        // if('error' in response) {
-        //     res.status(500).send({error: response});
-        // }
+        
+        fileLogger.info(`getPlans(DAO) responded with: ${JSON.stringify(response)}`);
+
+        // sends promisable response to browser
         res.json({data: response});
     }
 
     // 2. user wants to create new plan that will be stored in db
-    static async apiCreatePlan(req) {
+    static async apiCreatePlan(req, res, next) {
         //plan, date, user, priority, status
-        let plan = req.plan ?? {};
-        let date = req.date ?? new Date();
-        let user = { name: process.env.DEFAULT_USER };
+        let {plan, date, time, user_name} = req.query;
+        let user = user_name ?? "paulOkunev@mgail.com"; //testing purposes user
 
-        let response = await PlansDAO.addPlan(plan, date, user);
-        if('error' in response){
-            return { status: 500, error: response };
-        }
+        fileLogger.info(`addPlan(DAO) requested with: ${JSON.stringify({plan: plan, date: date, time: time, user: user_name})}`);
 
-        return { status: 200, data: response };
+        let insertedResponse = await PlansDAO.addPlan(plan, date, time, user);
+
+        fileLogger.info(`addPlan(DAO) responded with: ${JSON.stringify(insertedResponse)}`);
+
+        res.json({data: insertedResponse});
     }
 }
