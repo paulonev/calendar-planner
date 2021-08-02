@@ -104,13 +104,24 @@ export default class PlansDAO {
                 }
             };
             const options = { upsert: true };
-            await plans.updateOne(filter, updateDoc, options);
+            return await plans.updateOne(filter, updateDoc, options);
             
-            return await this.getPlans([planDate], userName);
-        } catch (e) {
+            // return await this.getPlans([planDate], userName);
+        } catch (error) {
             // console.error(`DAO-error: unable to add plan, ${e}`);
-            fileLogger.error(`DAO-error: unable to add plan, ${e}`);
-            return e;
+            fileLogger.error(`DAO-error: unable to add plan, ${error}`);
+            return error;
+        }
+    }
+
+    static async deletePlan(date, time, plan, userName) {
+        try {
+            const {deletedCount} = await plans.deleteOne({plan, date, time});
+            fileLogger.info(`Removed ${deletedCount} docs from user_plans`);
+
+            return deletedCount;
+        } catch(error) {
+            fileLogger.error(`DAO-error: unable to delete plan, ${error}`);
         }
     }
 }

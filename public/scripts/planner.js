@@ -47,7 +47,7 @@ export default class Planner {
                 const formData = new FormData(ev.target);
                 try {
                     /* updateView is a func that append a plan to planlist */ 
-                    this.addPlan(formData, this.updateView);
+                    this.addPlan(formData);
                     form.reset();
                 } catch(error) {
                     console.error(error);
@@ -94,45 +94,123 @@ export default class Planner {
             elem.innerText = this.dates.length;
         }
         
-        //using fetch API instead on PlansController
-        //interaction with server-side script 
-        //make plans.controller request to get user plans to display
-        //we have this.dates and process.env.DEFAULT_USER
+        await this.updatePlanList();
+    }
+    
+    // === Gets plans from DB and appends them to planListNode in form of html ===
+    async updatePlanList() {
         const planListNode = document.querySelector(".widget__planner-planlist");
+        planListNode.innerHTML = "";
+
         try {
-            //work around nested obj parsing issue, or choose another tool (axios, for instance)
+            // === Sending GET request for specific selected dates and user ===
+            // TODO: work around nested obj parsing issue, or choose another tool (axios, for instance)
             const req = { days: this.dates, userName : "paulOkunev@mgail.com" };
+            // TODO: if i remove URLSearchparams, can i send data inside the body???
             const url = new URL("http://localhost:8080/plans");
             url.search = new URLSearchParams(req).toString();
             
             const res = await fetch(url);
             const {data} = await res.json();
             
-            this.updateView(planListNode, data);
+            data.forEach((d) => {
+                const planDateBlock = document.createElement("div");
+                planDateBlock.setAttribute("class", "planlist__group");
+                planDateBlock.setAttribute("date", d._id);
+                const planDate = document.createElement("h4");
+                planDate.setAttribute("class", "date");
+                planDate.appendChild(document.createTextNode(d._id));
+                planDateBlock.appendChild(planDate);
+                d.items.forEach((item) => {
+                    const planListItem = new PlanListItem(item);
+                    planDateBlock.appendChild(planListItem.getHtmlNode());
+                });
+                planListNode.appendChild(planDateBlock);
+            });
+            
+            // assign event callbacks
+            let rmButtons = document.getElementsByClassName("actionButtons__remove");
+            Array.prototype.forEach.call(rmButtons, (button) => {
+                button.addEventListener("click", this.deletePlan.bind(this));
+            });
         } catch (error) {
             console.log(error);
             planListNode.appendChild(document.createTextNode("Sorry. We have an error. Retry later, please."));
         }
     }
-    
-    // === Callback that appends data to planListNode in form of html ===
-    updateView(planListNode, data) {
-        planListNode.innerHTML = "";
-        data.forEach((d) => {
-            planListNode.appendChild(document.createElement("h4")).appendChild(document.createTextNode(d._id));
-            d.items.forEach((item) => {
-                const planListItem = new PlanListItem(item);
-                planListNode.appendChild(planListItem.getHtmlNode());
-            });
+
+    async deletePlan(event) {
+        // console.log(updateCallback);
+        const targetElement = event.target;
+        let { date, time, plan } = getPlanData();
+
+        // === Finds data in plan, time and date nodes in DOM ===
+        function getPlanData() {
+            const planClassName = "planlist__plan";
+            const timeClassName = "planlist__time";
+            const groupClassName = "planlist__group";
+            const planItemClassName = "planlist__item";
+        
+            let date, time, plan;
+            let node = targetElement;
+            while (node.className !== planItemClassName) {
+                node = node.parentNode;
+            }
+            
+            setPlanTime(node);
+            setDate(node);
+
+            // traversing tree from root (.planlist)
+            function setPlanTime(node) {
+                if (node === null) {
+                    return;
+                }
+                
+                if (node.className === planClassName) plan = node.textContent;
+                if (node.className === timeClassName) time = node.textContent;
+                
+                for (let childNode of node.childNodes) {
+                    setPlanTime(childNode);
+                }
+                return;
+            }
+            
+            function setDate(node) {
+                try {
+                    while (node.className !== groupClassName) {
+                        node = node.parentNode;
+                    }
+                    date = node.getAttribute("date");
+                } catch(error) {
+                    console.log(`Couldn't find node with className ${groupClassName}`);
+                }
+            }
+            
+            return { date, time, plan };
+        }
+        
+        const url = new URL("http://localhost:8080/plans/");
+        const reqObj = {date: date, time: time, plan: plan};
+        const res = await fetch(url, {
+            method: "delete",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(reqObj)
         });
+
+        const deletedCount = await res.json();
+        console.log(`Delete ${deletedCount} items`);
+
+        // console.log(this); //event listener has another this
+        await this.updatePlanList();
     }
 
     /**
     * TODO: set this is event listener
     * @param {Object} formData - form data (time, plan)
-    * @param {Object} callback - update planList node
     */
-    async addPlan(formData, callback) {
+    async addPlan(formData) {
         if(!formData) {
             //create error
             //dispatch error on planner
@@ -153,21 +231,16 @@ export default class Planner {
 
                 const insertedPlan = await fetch(url, fetchParams);
 
-                // for UI update
-                const planListNode = document.querySelector(".widget__planner-planlist");
-                
-                // === Receives back plans for specified date(s) and calls updateView() === 
+                // === Receives back plans for specified date(s) and calls updatePlanList() === 
                 insertedPlan
                   .json()
                   .then((res) => {
                     console.log("FROM API result", res.data);
-                    callback(planListNode, res.data);
                 });
             }
-        } catch (error)
-        {
+            this.updatePlanList();
+        } catch (error) {
             console.error(`Db error. Couldn't add a plan. ${error}`);
-            throw error;
         }
     }
 

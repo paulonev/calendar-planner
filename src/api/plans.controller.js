@@ -31,4 +31,17 @@ export default class PlansController {
 
         res.json({data: insertedResponse});
     }
+
+    // 3. user deletes his plan identified by date, time and planText
+    // should i implement delete only by id, thus performing somehow extra req for identifying id by date, time, planText
+    static async apiDeletePlan(req, res, next) {
+        // console.log(req.body);
+        let {date, time, plan, user_name} = req.body;
+        let user = user_name ?? "paulOkunev@mgail.com"; //testing purposes user
+
+        fileLogger.info(`deletePlan(DAO) requested with: ${JSON.stringify({plan: plan, date: date, time: time})}`);
+
+        let deletedCount = await PlansDAO.deletePlan(date, time, plan, user);
+        res.json(deletedCount); //return status code if needed
+    }
 }

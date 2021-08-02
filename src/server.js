@@ -8,6 +8,8 @@ import { fileURLToPath } from "url";
 export const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+app.use(express.json());
+
 app.use(cors());
 
 app.get("/", (req, res) => {
@@ -25,7 +27,8 @@ app.get("/", (req, res) => {
 const router = new Router();
 router.route("/plans")
   .post(PlansController.apiCreatePlan)
-  .get(PlansController.apiGetPlans);
+  .get(PlansController.apiGetPlans)
+  .delete(PlansController.apiDeletePlan);
 
 app.use("/", router);
 app.use(express.static("public"));
