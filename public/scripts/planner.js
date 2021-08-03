@@ -1,9 +1,13 @@
 import {PlanListItem} from "./utils/planListItem.js";
+import {RemovalDialog} from "./popup.js";
 
 // client-side script
 export default class Planner {
     constructor(dates) {
         this.dates = dates;
+        this.editableDate = "";
+        this.editableTime = "";
+        this.editablePlan = "";
     }
     
     // TODO: make user-friendly dates output, grouping by month
@@ -28,31 +32,37 @@ export default class Planner {
             
             let formTimeInput = document.createElement("input");
             formTimeInput.type = "time";
-            formTimeInput.id = "time";
+            formTimeInput.id = "timeInput";
             formTimeInput.name = "time";
             formTimeInput.value = "00:00";
             let formPlanInput = document.createElement("input");
             formPlanInput.type = "text";
-            formPlanInput.id = "plan";
+            formPlanInput.id = "planInput";
             formPlanInput.name = "plan";
             formPlanInput.placeholder = "Write up your plan";
+            let formDateInput = document.createElement("input");
+            formDateInput.type = "text";
+            formDateInput.id = "dateInput";
+            formDateInput.name = "date";
+            formDateInput.style.display = "none";
             let formButton = document.createElement("button");
             formButton.innerText = "Create";
             let form = document.createElement("form");
-            [formTimeInput, formPlanInput, formButton].forEach((elem) => form.appendChild(elem));
+            [formTimeInput, formPlanInput, formDateInput, formButton].forEach((elem) => form.appendChild(elem));
             form.setAttribute("class", "input-plan__form");
             
-            form.addEventListener("submit", (ev) => {
-                ev.preventDefault();
-                const formData = new FormData(ev.target);
-                try {
-                    /* updateView is a func that append a plan to planlist */ 
-                    this.addPlan(formData);
-                    form.reset();
-                } catch(error) {
-                    console.error(error);
-                }
-            })
+            // form.addEventListener("submit", (ev) => {
+            //     ev.preventDefault();
+            //     const formData = new FormData(ev.target);
+            //     try {
+            //         /* updateView is a func that append a plan to planlist */ 
+            //         this.OnAddPlan.bind(this, formData);
+            //         form.reset();
+            //     } catch(error) {
+            //         console.error(error);
+            //     }
+            // })
+            form.addEventListener("submit", this.OnAddPlan.bind(this));
             
             planner.appendChild(form);
             let header4 = document.createElement("h4");
@@ -92,6 +102,8 @@ export default class Planner {
         else {
             let elem = document.querySelector(".planner__selected-days");
             elem.innerText = this.dates.length;
+            document.getElementById("timeInput").value = null;
+            document.getElementById("planInput").value = null;
         }
         
         await this.updatePlanList();
@@ -101,7 +113,7 @@ export default class Planner {
     async updatePlanList() {
         const planListNode = document.querySelector(".widget__planner-planlist");
         planListNode.innerHTML = "";
-
+        
         try {
             // === Sending GET request for specific selected dates and user ===
             // TODO: work around nested obj parsing issue, or choose another tool (axios, for instance)
@@ -131,63 +143,48 @@ export default class Planner {
             // assign event callbacks
             let rmButtons = document.getElementsByClassName("actionButtons__remove");
             Array.prototype.forEach.call(rmButtons, (button) => {
-                button.addEventListener("click", this.deletePlan.bind(this));
+                button.addEventListener("click", this.OnDeletePlan.bind(this));
+            });
+            let editButtons = document.getElementsByClassName("actionButtons__edit");
+            Array.prototype.forEach.call(editButtons, (button) => {
+                button.addEventListener("click", this.OnEditPlan.bind(this));
             });
         } catch (error) {
             console.log(error);
             planListNode.appendChild(document.createTextNode("Sorry. We have an error. Retry later, please."));
         }
     }
-
-    async deletePlan(event) {
-        // console.log(updateCallback);
-        const targetElement = event.target;
-        let { date, time, plan } = getPlanData();
-
-        // === Finds data in plan, time and date nodes in DOM ===
-        function getPlanData() {
-            const planClassName = "planlist__plan";
-            const timeClassName = "planlist__time";
-            const groupClassName = "planlist__group";
-            const planItemClassName = "planlist__item";
+    
+    /**
+    * Event handler for editing planlist item
+    * @param {} event 
+    */
+    async OnEditPlan(event) {
+        let { date, time, plan, /*dialogParent*/ } = this.getPlanData(event.target);
         
-            let date, time, plan;
-            let node = targetElement;
-            while (node.className !== planItemClassName) {
-                node = node.parentNode;
-            }
-            
-            setPlanTime(node);
-            setDate(node);
-
-            // traversing tree from root (.planlist)
-            function setPlanTime(node) {
-                if (node === null) {
-                    return;
-                }
-                
-                if (node.className === planClassName) plan = node.textContent;
-                if (node.className === timeClassName) time = node.textContent;
-                
-                for (let childNode of node.childNodes) {
-                    setPlanTime(childNode);
-                }
-                return;
-            }
-            
-            function setDate(node) {
-                try {
-                    while (node.className !== groupClassName) {
-                        node = node.parentNode;
-                    }
-                    date = node.getAttribute("date");
-                } catch(error) {
-                    console.log(`Couldn't find node with className ${groupClassName}`);
-                }
-            }
-            
-            return { date, time, plan };
+        document.getElementById("timeInput").value = time;
+        document.getElementById("planInput").value = plan;
+        document.getElementById("dateInput").value = date;
+        
+        this.editableDate = date;
+        this.editableTime = time;
+        this.editablePlan = plan;
+        
+        return this; // !!!!!!!!!!!!!!!!
+    }
+    
+    /**
+    * Event handler for deleting planlist item
+    * @param {*} event 
+    * @returns 
+    */
+    async OnDeletePlan(event) {
+        let { date, time, plan, /*dialogParent*/ } = this.getPlanData(event.target);
+        if(!confirm(`Are you sure to delete record? \nAt ${time} on ${date}: ${plan}`)) {
+            return;
         }
+        // let dialog = new RemovalDialog(dialogParent);
+        // dialog.show({date, time, plan});
         
         const url = new URL("http://localhost:8080/plans/");
         const reqObj = {date: date, time: time, plan: plan};
@@ -198,52 +195,70 @@ export default class Planner {
             },
             body: JSON.stringify(reqObj)
         });
-
+        
         const deletedCount = await res.json();
         console.log(`Delete ${deletedCount} items`);
-
+        
         // console.log(this); //event listener has another this
         await this.updatePlanList();
     }
-
+    
     /**
-    * TODO: set this is event listener
+    * Event handler for submitting form
     * @param {Object} formData - form data (time, plan)
     */
-    async addPlan(formData) {
-        if(!formData) {
+    async OnAddPlan(event) {
+        event.preventDefault();
+        const form = event.target;
+
+        if(!form) {
             //create error
             //dispatch error on planner
             console.error("Error. Undefined plan.");
             return;
         }      
+        const formData = new FormData(form);
+        const url = new URL("http://localhost:8080/plans");
+        let req;
+
         try
         {
-            for(let date of this.dates) {
-                const req = { ...this.formDataToObject(formData), date };
+            if(this.editableDate) {
+                let { editableDate, editableTime, editablePlan } = this;
+                req = { editableDate, ...this.formDataToObject(formData), editableTime, editablePlan };
                 console.log("Request on the client side ", req);
-
-                const url = new URL("http://localhost:8080/plans");
                 url.search = new URLSearchParams(req).toString();
-                const fetchParams = {
-                    method: "post"
-                }; 
-
+                
+                const fetchParams = {method: "put"};
                 const insertedPlan = await fetch(url, fetchParams);
-
-                // === Receives back plans for specified date(s) and calls updatePlanList() === 
                 insertedPlan
-                  .json()
-                  .then((res) => {
-                    console.log("FROM API result", res.data);
+                    .json()
+                    .then((res) => {
+                        console.log("FROM API result", res.data);
                 });
+            }
+            else {
+                for(let date of this.dates) {
+                    req = {...this.formDataToObject(formData), date};
+                    console.log("Request on the client side ", req);
+                    url.search = new URLSearchParams(req).toString();
+            
+                    const fetchParams = {method: "post"};   
+                    const insertedPlan = await fetch(url, fetchParams);
+                    // === Receives back plans for specified date(s) and calls updatePlanList() === 
+                    insertedPlan
+                    .json()
+                    .then((res) => {
+                        console.log("FROM API result", res.data);
+                    });
+                }
             }
             this.updatePlanList();
         } catch (error) {
             console.error(`Db error. Couldn't add a plan. ${error}`);
         }
     }
-
+    
     formDataToObject(formData) {
         if(Object.getPrototypeOf(formData) === FormData.prototype)
         {
@@ -251,8 +266,56 @@ export default class Planner {
             for(let [key, value] of formData) {
                 parsedFormDataObject[key] = value;
             }
-        
+            
             return parsedFormDataObject;
         }
+    }
+    
+    // === Finds data in plan, time and date nodes in DOM ===
+    getPlanData(targetElement) {
+        const planClassName = "planlist__plan";
+        const timeClassName = "planlist__time";
+        const groupClassName = "planlist__group";
+        const planItemClassName = "planlist__item";
+        
+        let date, time, plan;
+        let node = targetElement;
+        while (node.className !== planItemClassName) {
+            node = node.parentNode;
+        }
+        
+        // finding parentNode for future dialog
+        // dialogParent = node;
+        
+        setPlanTime(node);
+        setDate(node);
+        
+        // traversing tree from root (.planlist)
+        function setPlanTime(node) {
+            if (node === null) {
+                return;
+            }
+            
+            if (node.className === planClassName) plan = node.textContent;
+            if (node.className === timeClassName) time = node.textContent;
+            
+            for (let childNode of node.childNodes) {
+                setPlanTime(childNode);
+            }
+            return;
+        }
+        
+        function setDate(node) {
+            try {
+                while (node.className !== groupClassName) {
+                    node = node.parentNode;
+                }
+                date = node.getAttribute("date");
+            } catch(error) {
+                console.log(`Couldn't find node with className ${groupClassName}`);
+            }
+        }
+        
+        return { date, time, plan, /*dialogParent*/ };
     }
 }

@@ -28,7 +28,8 @@ const router = new Router();
 router.route("/plans")
   .post(PlansController.apiCreatePlan)
   .get(PlansController.apiGetPlans)
-  .delete(PlansController.apiDeletePlan);
+  .delete(PlansController.apiDeletePlan)
+  .put(PlansController.apiUpdatePlan);
 
 app.use("/", router);
 app.use(express.static("public"));

@@ -1,3 +1,4 @@
+import { ObjectId } from "mongodb";
 import { fileLogger } from "../../loggerSetup.js";
 
 let pl_cal_db; // database handle
@@ -34,6 +35,28 @@ export default class PlansDAO {
             authInfo,
         };
         return response;
+    }
+
+    /**
+     * Find specific plan and update it's time and plan values
+     */
+    static async updatePlan(date, oldTime, oldPlan, newTime, newPlan, user) {
+        //find plan, return it's id
+        //update plan with that id to updTime & updPlan values
+        try
+        {
+            const filter = {date: date, time: oldTime, plan: oldPlan, user_name: user};
+                        
+            const updateFilter = {
+                $set: {
+                    time: newTime,
+                    plan: newPlan
+                }
+            };
+            return await plans.updateOne(filter, updateFilter);
+        } catch (error) {
+            fileLogger.error(`updatePlan(DAO) error. ${error}`);
+        }
     }
 
     /**

@@ -2,6 +2,18 @@ import PlansDAO from "../dao/plansDAO.js";
 import {fileLogger} from "../../loggerSetup.js";
 
 export default class PlansController {
+    // extra: edit plan requires id of edited plan
+    static async apiUpdatePlan(req, res, next) {
+        let {editableDate, time, plan, editableTime, editablePlan, user_name} = req.query;
+        let user = user_name ?? "paulOkunev@mgail.com";
+
+        fileLogger.info(`updatePlan(DAO) requested with: ${JSON.stringify({date: editableDate, oldTime: editableTime , oldPlan: editablePlan, newPlan: plan, newTime: time, user: user})}`);
+        
+        let response = await PlansDAO.updatePlan(editableDate, editableTime, editablePlan, time, plan, user);
+        
+        fileLogger.info(`updatePlan(DAO) responded with: ${JSON.stringify(response)}`);
+    }
+
     // 1. user wants to view his plans for each of selected days
     static async apiGetPlans(req, res, next) {
         let days = req.query.days.split(',') ?? []; //assume it to be a collection
@@ -18,6 +30,7 @@ export default class PlansController {
     }
 
     // 2. user wants to create new plan that will be stored in db
+    // 4. user is aware of editing the plan specified by date, time and plan props.
     static async apiCreatePlan(req, res, next) {
         //plan, date, user, priority, status
         let {plan, date, time, user_name} = req.query;
