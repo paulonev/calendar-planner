@@ -4,14 +4,16 @@ import {fileLogger} from "../../loggerSetup.js";
 export default class PlansController {
     // extra: edit plan requires id of edited plan
     static async apiUpdatePlan(req, res, next) {
-        let {editableDate, time, plan, editableTime, editablePlan, user_name} = req.query;
+        let {date, time, plan, editableTime, editablePlan, user_name} = req.query;
         let user = user_name ?? "paulOkunev@mgail.com";
 
-        fileLogger.info(`updatePlan(DAO) requested with: ${JSON.stringify({date: editableDate, oldTime: editableTime , oldPlan: editablePlan, newPlan: plan, newTime: time, user: user})}`);
+        fileLogger.info(`updatePlan(DAO) requested with: ${JSON.stringify({date: date, oldTime: editableTime , oldPlan: editablePlan, newPlan: plan, newTime: time, user: user})}`);
         
-        let response = await PlansDAO.updatePlan(editableDate, editableTime, editablePlan, time, plan, user);
+        let response = await PlansDAO.updatePlan(date, editableTime, editablePlan, time, plan, user);
         
         fileLogger.info(`updatePlan(DAO) responded with: ${JSON.stringify(response)}`);
+
+        res.json({data: response});
     }
 
     // 1. user wants to view his plans for each of selected days

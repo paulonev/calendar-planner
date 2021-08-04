@@ -1,17 +1,29 @@
 import {PlanListItem} from "./utils/planListItem.js";
 import {RemovalDialog} from "./popup.js";
 
+//shared instance
+//alternative ???
+let EditTracker = {
+    date: "",
+    time: "",
+    plan: ""
+};
+
 // client-side script
 export default class Planner {
     constructor(dates) {
         this.dates = dates;
-        this.editableDate = "";
-        this.editableTime = "";
-        this.editablePlan = "";
+        // this.editableDate = "";
+        // this.editableTime = "";
+        // this.editablePlan = "";
     }
     
     // TODO: make user-friendly dates output, grouping by month
     async update() {
+        EditTracker.date = "";
+        EditTracker.time = "";
+        EditTracker.plan = "";
+
         let planner = document.querySelector(".widgets__planner");
         if(!planner) {
             return;
@@ -166,11 +178,15 @@ export default class Planner {
         document.getElementById("planInput").value = plan;
         document.getElementById("dateInput").value = date;
         
-        this.editableDate = date;
-        this.editableTime = time;
-        this.editablePlan = plan;
+        EditTracker.date = date;
+        EditTracker.time = time;
+        EditTracker.plan = plan;
+        // this.editableDate = date;
+        // this.editableTime = time;
+        // this.editablePlan = plan;
         
-        return this; // !!!!!!!!!!!!!!!!
+        // return this; // !!!!!!!!!!!!!!!!
+        // return editTracker;
     }
     
     /**
@@ -219,15 +235,40 @@ export default class Planner {
         }      
         const formData = new FormData(form);
         const url = new URL("http://localhost:8080/plans");
-        let req;
+        // let req;
 
         try
         {
-            if(this.editableDate) {
-                let { editableDate, editableTime, editablePlan } = this;
-                req = { editableDate, ...this.formDataToObject(formData), editableTime, editablePlan };
-                console.log("Request on the client side ", req);
-                url.search = new URLSearchParams(req).toString();
+            if(EditTracker.date === "" /* this.editableDate */) {
+                console.log("Inside if");
+                for(let date of this.dates) {
+                    // shape form data
+                    formData.set("date", date);
+                    formData.delete("editableDate");
+                    url.search = new URLSearchParams(formData).toString();
+                    //figure out with body encoded url string
+                    const fetchParams = {
+                        method: "post"
+                    };   
+                    const insertedPlan = await fetch(url, fetchParams);
+                    // === Receives back plans for specified date(s) and calls updatePlanList() === 
+                    insertedPlan
+                      .json()
+                      .then((res) => {
+                          console.log("FROM API result", res.data);
+                    });
+                }
+            }
+            else {
+                console.log(EditTracker.date);
+                // editable ~ old
+                // let { editableTime, editablePlan } = this;
+                // req = { ...this.formDataToObject(formData) /*new data - time, plan, date*/};
+                
+                // console.log("Request on the client side ", req);
+                // add editableTime, editablePlan to formData
+                const shapedFormData = this.getEditableFormData.call(this, formData);
+                url.search = new URLSearchParams(shapedFormData).toString();
                 
                 const fetchParams = {method: "put"};
                 const insertedPlan = await fetch(url, fetchParams);
@@ -236,22 +277,15 @@ export default class Planner {
                     .then((res) => {
                         console.log("FROM API result", res.data);
                 });
-            }
-            else {
-                for(let date of this.dates) {
-                    req = {...this.formDataToObject(formData), date};
-                    console.log("Request on the client side ", req);
-                    url.search = new URLSearchParams(req).toString();
-            
-                    const fetchParams = {method: "post"};   
-                    const insertedPlan = await fetch(url, fetchParams);
-                    // === Receives back plans for specified date(s) and calls updatePlanList() === 
-                    insertedPlan
-                    .json()
-                    .then((res) => {
-                        console.log("FROM API result", res.data);
-                    });
-                }
+
+                //trying to solve plan modification issue
+                //helps making post request for that same day
+                EditTracker.plan = "";
+                EditTracker.date = "";
+                EditTracker.time = "";
+                // this.editableDate = "";
+                // this.editableTime = "";
+                // this.editablePlan = ""; 
             }
             this.updatePlanList();
         } catch (error) {
@@ -259,16 +293,25 @@ export default class Planner {
         }
     }
     
-    formDataToObject(formData) {
+    getEditableFormData(formData) {
         if(Object.getPrototypeOf(formData) === FormData.prototype)
         {
-            const parsedFormDataObject = Object.create({});
-            for(let [key, value] of formData) {
-                parsedFormDataObject[key] = value;
-            }
+            // formData.set("editablePlan", this.editablePlan);
+            // formData.set("editableTime", this.editableTime);
+
+            formData.set("editablePlan", EditTracker.plan);
+            formData.set("editableTime", EditTracker.time);
+            // const parsedFormDataObject = Object.create({});
+            // for(let [key, value] of formData) {
+            //     parsedFormDataObject[key] = value;
+            // }
             
-            return parsedFormDataObject;
+            // parsedFormDataObject["editablePlan"] = this.editablePlan;
+            // parsedFormDataObject["editableTime"] = this.editableTime;
+            // return parsedFormDataObject;
+            return formData;
         }
+    
     }
     
     // === Finds data in plan, time and date nodes in DOM ===

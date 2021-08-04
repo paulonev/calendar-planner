@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 export const __dirname = dirname(fileURLToPath(import.meta.url));
 
 const app = express();
+app.use(express.urlencoded({extended: false}));
 app.use(express.json());
 
 app.use(cors());

@@ -41,8 +41,6 @@ export default class PlansDAO {
      * Find specific plan and update it's time and plan values
      */
     static async updatePlan(date, oldTime, oldPlan, newTime, newPlan, user) {
-        //find plan, return it's id
-        //update plan with that id to updTime & updPlan values
         try
         {
             const filter = {date: date, time: oldTime, plan: oldPlan, user_name: user};
